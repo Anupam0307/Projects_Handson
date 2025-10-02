@@ -3,7 +3,7 @@ name: Deploy static site to S3 & CloudFront
 on:
   push:
     branches:
-      - main  # change if your branch is different
+      - master  # change if your branch is different
 
 permissions:
   id-token: write
