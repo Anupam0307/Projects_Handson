@@ -9,16 +9,15 @@ resource "aws_cloudfront_origin_access_control" "s3_oac" {
 
 resource "aws_cloudfront_distribution" "cdn" {
   enabled = true
-  aliases = [var.domain_name, "www.${var.domain_name}"]
+  aliases = ["www.${var.domain_name}"]
 
-  origins {
-    origin_id   = "s3-${aws_s3_bucket.site.id}"
-    domain_name = aws_s3_bucket.site.bucket_regional_domain_name
+ origin {
+  origin_id   = "s3-${aws_s3_bucket.site.id}"
+  domain_name = aws_s3_bucket.site.bucket_regional_domain_name
 
-    origin_access_control_id = aws_cloudfront_origin_access_control.s3_oac.id
+  origin_access_control_id = aws_cloudfront_origin_access_control.s3_oac.id
+}
 
-    s3_origin_config {}
-  }
 
   default_root_object = "index.html"
 
@@ -36,9 +35,9 @@ resource "aws_cloudfront_distribution" "cdn" {
       }
     }
 
-    min_ttl                = 0
-    default_ttl            = 3600
-    max_ttl                = 86400
+    min_ttl     = 0
+    default_ttl = 3600
+    max_ttl     = 86400
   }
 
   price_class = "PriceClass_100" # adjust to your traffic/region needs
@@ -50,9 +49,9 @@ resource "aws_cloudfront_distribution" "cdn" {
   }
 
   viewer_certificate {
-    acm_certificate_arn            = var.certificate_arn
-    ssl_support_method             = "sni-only"
-    minimum_protocol_version       = "TLSv1.2_2021"
+    acm_certificate_arn      = var.certificate_arn
+    ssl_support_method       = "sni-only"
+    minimum_protocol_version = "TLSv1.2_2021"
   }
 
   # Typical SPA handling: return index.html for 403/404 so front-end routing works

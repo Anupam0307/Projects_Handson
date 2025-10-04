@@ -1,12 +1,18 @@
 resource "aws_s3_bucket" "site" {
-  bucket = replace(lower(var.domain_name), ".", "-") # bucket name must be unique; adjust if needed
-  acl    = "private"
-
-  force_destroy = false
+  bucket = replace(lower(var.domain_name), ".", "-")
 
   tags = {
     Name = "static-site-${var.domain_name}"
     Env  = "prod"
+  }
+}
+
+# Enforce bucket owner ownership (no ACLs needed)
+resource "aws_s3_bucket_ownership_controls" "site" {
+  bucket = aws_s3_bucket.site.id
+
+  rule {
+    object_ownership = "BucketOwnerEnforced"
   }
 }
 
@@ -18,6 +24,3 @@ resource "aws_s3_bucket_public_access_block" "block" {
   ignore_public_acls      = true
   restrict_public_buckets = true
 }
-
-# Minimal bucket policy allowing the CloudFront OAC to GetObject via canonical user is not used with OAC.
-# Policy will be added later via CloudFront origin access control signing (no extra bucket policy needed).
