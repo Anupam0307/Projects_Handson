@@ -1,11 +1,17 @@
 variable "region" {
-  default = "us-east-1"
+  description = "AWS region"
+  type        = string
+  default     = "us-east-1"
 }
 
 variable "cluster_name" {
-  default = "learning-eks"
+  description = "EKS cluster name"
+  type        = string
+  default     = "learning-eks"
 }
 
 variable "node_instance_type" {
-  default = "t3.micro"
+  description = "EC2 instance type for worker nodes"
+  type        = string
+  default     = "t3.micro"
 }

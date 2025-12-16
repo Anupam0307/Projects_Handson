@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 # ------------------------
-# VPC (Simple & Minimal)
+# VPC
 # ------------------------
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
@@ -39,6 +39,10 @@ module "eks" {
   cluster_endpoint_public_access  = true
   cluster_endpoint_private_access = false
 
+  create_kms_key                = false
+  create_cloudwatch_log_group   = false
+  cluster_encryption_config = {}
+
   access_entries = {
     admin = {
       principal_arn = "arn:aws:iam::802732540071:user/devops-07"
@@ -54,9 +58,6 @@ module "eks" {
     }
   }
 
-  # ------------------------
-  # Managed Node Group
-  # ------------------------
   eks_managed_node_groups = {
     default = {
       name = "learning-eks-workers"
@@ -66,17 +67,6 @@ module "eks" {
       max_size     = 2
 
       instance_types = [var.node_instance_type]
-
-      tags = {
-        Name        = "learning-eks-worker"
-        Environment = "dev"
-        Project     = "eks-helm-learning"
-      }
-
-      labels = {
-        role = "worker"
-        app  = "general"
-      }
     }
   }
 }
