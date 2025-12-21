@@ -1,0 +1,35 @@
+name: Helm Deploy
+
+on:
+  push:
+    paths:
+      - "Project3-EKS-3Tier-StateLocking/helm/**"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name project3-eks --region us-east-1
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Deploy DB
+        run: helm upgrade --install db Project3-EKS-3Tier-StateLocking/helm/db
+
+      - name: Deploy App
+        run: helm upgrade --install app Project3-EKS-3Tier-StateLocking/helm/app
+
+      - name: Deploy Web
+        run: helm upgrade --install web Project3-EKS-3Tier-StateLocking/helm/web
