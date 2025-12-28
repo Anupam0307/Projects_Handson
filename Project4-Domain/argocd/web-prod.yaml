@@ -9,7 +9,7 @@ spec:
   source:
     repoURL: https://github.com/yourgithub/project-4
     targetRevision: main
-    path: Project4-Domain/helm/app
+    path: Project4-Domain/helm/web
     helm:
       valueFiles:
         - values-prod.yaml
