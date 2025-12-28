@@ -1,9 +1,7 @@
-name: Build and Push App Image
+name: Project4 - Build and Push App Image
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 env:
   IMAGE_NAME: anupam0307/app
@@ -24,7 +22,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t $IMAGE_NAME:$IMAGE_TAG app/
+          docker build -t $IMAGE_NAME:$IMAGE_TAG Project4-Domain/app/
 
       - name: Push Docker image
         run: |
@@ -32,12 +30,13 @@ jobs:
 
       - name: Update Helm values (dev)
         run: |
-          sed -i "s/tag:.*/tag: $IMAGE_TAG/" helm/app/values-dev.yaml
+          sed -i "s/tag:.*/tag: $IMAGE_TAG/" \
+            Project4-Domain/helm/app/values-dev.yaml
 
       - name: Commit image update
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add helm/app/values-dev.yaml
-          git commit -m "Update dev image to $IMAGE_TAG"
+          git add Project4-Domain/helm/app/values-dev.yaml
+          git commit -m "ci(project4): update dev image to $IMAGE_TAG"
           git push
