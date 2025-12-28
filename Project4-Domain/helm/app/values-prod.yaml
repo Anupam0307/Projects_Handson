@@ -1,0 +1,27 @@
+replicaCount: 2
+
+image:
+  repository: anupam0307/app
+  tag: prod
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8000
+
+resources:
+  requests:
+    cpu: "250m"
+    memory: "256Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+
+env:
+  ENV: prod
+
+serviceAccount:
+  name: app-sa
+
+irsa:
+  roleArn: arn:aws:iam::<ACCOUNT_ID>:role/eks-secrets-reader-prod
