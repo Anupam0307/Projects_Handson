@@ -1,7 +1,7 @@
 name: Project4 - Build and Push App Image
 
 on:
-  workflow_dispatch:
+  workflow_call: {}
 
 env:
   IMAGE_NAME: anupam0307/app
