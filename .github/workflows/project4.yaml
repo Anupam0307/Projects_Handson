@@ -1,8 +1,36 @@
-name: Project4 CI (manual)
+name: Project4 CI - Build & Push App Image
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - "Project4-Domain/**"
   workflow_dispatch:
 
+env:
+  IMAGE_NAME: anupam0307/app
+  IMAGE_TAG: ${{ github.sha }}
+
 jobs:
-  run:
-    uses: ./Project4-Domain/.github/workflows/deploy.yaml
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to DockerHub
+        run: |
+          echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login \
+            -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t $IMAGE_NAME:$IMAGE_TAG \
+            Project4-Domain/app
+
+      - name: Push Docker image
+        run: |
+          docker push $IMAGE_NAME:$IMAGE_TAG
