@@ -1,8 +1,8 @@
 replicaCount: 1
 
 image:
-  repository: anupam0307/web
-  tag: dev
+  repository: nginx
+  tag: alpine
   pullPolicy: IfNotPresent
 
 service:
@@ -16,17 +16,8 @@ ingress:
     kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
   hosts:
     - host: dev.anupamghai.shop
       paths:
         - path: /
           pathType: Prefix
-
-resources:
-  requests:
-    cpu: "50m"
-    memory: "64Mi"
-  limits:
-    cpu: "150m"
-    memory: "128Mi"

@@ -36,7 +36,7 @@ module "eks" {
   private_subnets = module.vpc.private_subnets
 
   # MUST be free-tier eligible
-  node_instance_types = ["t3.micro"]
+  node_instance_types = var.node_instance_types
 
   desired_size = var.desired_size
   min_size     = var.min_size

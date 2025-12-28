@@ -1,7 +1,7 @@
 replicaCount: 2
 
 image:
-  repository: your-dockerhub-username/web
+  repository: anupam0307/web
   tag: prod
   pullPolicy: IfNotPresent
 
