@@ -7,9 +7,9 @@ spec:
   project: default
 
   source:
-    repoURL: https://github.com/yourgithub/project-4
+    repoURL: https://github.com/Anupam0307/Projects_Handson
     targetRevision: main
-    path: helm/app
+    path: Project4-Domain/helm/app
     helm:
       valueFiles:
         - values-prod.yaml
