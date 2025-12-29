@@ -1,13 +1,8 @@
 replicaCount: 1
 
-image:
-  repository: anupam0307/web
-  tag: dev
-  pullPolicy: IfNotPresent
-
-service:
-  type: ClusterIP
-  port: 80
+# Dev-specific overrides only
+# Image is inherited from values.yaml (nginx:alpine)
+# DO NOT define image here unless you actually build one
 
 ingress:
   enabled: true
