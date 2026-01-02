@@ -1,4 +1,4 @@
-name: Docker CI with Trivy
+name: Project 5 - Docker CI with Trivy
 
 on:
   push:
@@ -8,28 +8,35 @@ on:
       - "Multi-Stage-Docker-Monitoring/**"
   workflow_dispatch:
 
-
 jobs:
   build-scan-push:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: Multi-Stage-Docker-Monitoring
+
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
     - name: Login to Docker Hub
       run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login \
            -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-    - name: Build Image
-      run: docker build -t anupam0307/docker-prod-app:${{ github.sha }} app/
+    - name: Build Docker image
+      run: |
+        docker build -t anupam0307/project5-docker-monitoring:${{ github.sha }} .
 
     - name: Trivy Scan
       uses: aquasecurity/trivy-action@0.24.0
       with:
-        image-ref: anupam0307/docker-prod-app:${{ github.sha }}
+        image-ref: anupam0307/project5-docker-monitoring:${{ github.sha }}
         severity: CRITICAL
         exit-code: 1
         ignore-unfixed: true
 
-    - name: Push Image
-      run: docker push anupam0307/docker-prod-app:${{ github.sha }}
+    - name: Push Docker image
+      run: |
+        docker push anupam0307/project5-docker-monitoring:${{ github.sha }}
+
