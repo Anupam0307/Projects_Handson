@@ -27,7 +27,8 @@ jobs:
 
     - name: Build Docker image
       run: |
-        docker build -t anupam0307/project5-docker-monitoring:${{ github.sha }} .
+        docker build -t anupam0307/project5-docker-monitoring:${{ github.sha }} \
+        ./app
 
     - name: Trivy Scan
       uses: aquasecurity/trivy-action@0.24.0
