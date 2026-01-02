@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   app:
-    image: anupam0307/docker-prod-app:1.0.0
+    image: anupam0307/project5-docker-monitoring:latest
     env_file: .env
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
