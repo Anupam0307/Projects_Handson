@@ -105,3 +105,44 @@ module "irsa_app" {
     }
   }
 }
+
+module "alb_controller_irsa" {
+  source = "../../modules/alb-controller"
+
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_provider = module.eks.oidc_provider
+}
+
+resource "helm_release" "aws_load_balancer_controller" {
+  name       = "aws-load-balancer-controller"
+  repository = "https://aws.github.io/eks-charts"
+  chart      = "aws-load-balancer-controller"
+  namespace  = "kube-system"
+
+  depends_on = [module.alb_controller_irsa]
+
+  set {
+    name  = "clusterName"
+    value = module.eks.cluster_name
+  }
+
+  set {
+    name  = "region"
+    value = var.aws_region
+  }
+
+  set {
+    name  = "serviceAccount.create"
+    value = "true"
+  }
+
+  set {
+    name  = "serviceAccount.name"
+    value = "aws-load-balancer-controller"
+  }
+
+  set {
+    name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+    value = module.alb_controller_irsa.iam_role_arn
+  }
+}

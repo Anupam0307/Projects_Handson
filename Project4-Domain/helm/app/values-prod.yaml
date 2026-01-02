@@ -2,7 +2,7 @@ replicaCount: 2
 
 image:
   repository: anupam0307/app
-  tag: prod
+  tag: ""
   pullPolicy: IfNotPresent
 
 service:

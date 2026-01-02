@@ -19,3 +19,9 @@ variable "min_size" {
 variable "max_size" {
   type = number
 }
+
+variable "aws_region" {
+  description = "AWS region for EKS and ALB controller"
+  type        = string
+  default     = "us-east-1"
+}

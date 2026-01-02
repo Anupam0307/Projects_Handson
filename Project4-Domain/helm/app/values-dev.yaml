@@ -1,14 +1,26 @@
+# Number of replicas for dev
 replicaCount: 1
 
+# Application image (Python app)
 image:
   repository: anupam0307/app
-  tag: dev
+  tag: ""
   pullPolicy: IfNotPresent
 
+# Container port (what your Python app listens on)
+containerPort: 8000
+
+# Service configuration (internal only)
 service:
   type: ClusterIP
   port: 8000
+  targetPort: 8000
 
+# Environment variables
+env:
+  ENV: dev
+
+# Resources (free-tier safe)
 resources:
   requests:
     cpu: "100m"
@@ -17,11 +29,10 @@ resources:
     cpu: "250m"
     memory: "256Mi"
 
-env:
-  ENV: dev
-
+# Service account for IRSA
 serviceAccount:
   name: app-sa
 
+# IRSA configuration (Secrets Manager access)
 irsa:
   roleArn: arn:aws:iam::<ACCOUNT_ID>:role/eks-secrets-reader-dev
