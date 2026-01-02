@@ -8,7 +8,7 @@ services:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
       interval: 30s
       timeout: 5s
-      retries: 4
+      retries: 3
 
   db:
     image: postgres:15-alpine
