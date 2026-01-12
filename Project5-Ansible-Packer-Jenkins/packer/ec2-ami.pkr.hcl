@@ -8,10 +8,10 @@ packer {
 }
 
 source "amazon-ebs" "base_ami" {
-  region        = "ap-south-1"
-  instance_type = "t3.micro"
-  ssh_username  = "ec2-user"
-  ami_name      = "devops-base-ami-{{timestamp}}"
+  region          = "ap-south-1"
+  instance_type   = "t3.micro"
+  ssh_username    = "ec2-user"
+  ami_name        = "devops-base-ami-{{timestamp}}"
   ami_description = "Base AMI with Docker, Nginx, Git installed"
 
   source_ami_filter {
@@ -30,8 +30,10 @@ build {
   provisioner "shell" {
     inline = [
       "sudo yum update -y",
-      "sudo yum install -y docker git nginx",
-      "sudo systemctl enable docker nginx"
+      "sudo yum install -y docker git",
+      "sudo amazon-linux-extras install -y nginx1",
+      "sudo systemctl enable docker",
+      "sudo systemctl enable nginx"
     ]
   }
 }
