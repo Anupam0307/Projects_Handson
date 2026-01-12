@@ -42,7 +42,7 @@ pipeline {
                 --query 'Images | sort_by(@,&CreationDate)[-1].ImageId' \
                 --output text)
 
-              terraform plan -var="ami_id=$AMI_ID"
+              terraform plan -var="ami_id=$AMI_ID" -var="aws_region=$AWS_REGION"
             '''
           }
         }
@@ -70,7 +70,7 @@ pipeline {
                 --query 'Images | sort_by(@,&CreationDate)[-1].ImageId' \
                 --output text)
 
-              terraform apply -auto-approve -var="ami_id=$AMI_ID"
+              terraform apply -auto-approve -var="ami_id=$AMI_ID" -var="aws_region=$AWS_REGION"
             '''
           }
         }

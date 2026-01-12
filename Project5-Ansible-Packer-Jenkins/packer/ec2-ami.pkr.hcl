@@ -12,6 +12,7 @@ source "amazon-ebs" "base_ami" {
   instance_type = "t3.micro"
   ssh_username  = "ec2-user"
   ami_name      = "devops-base-ami-{{timestamp}}"
+  ami_description = "Base AMI with Docker, Nginx, Git installed"
 
   source_ami_filter {
     filters = {
