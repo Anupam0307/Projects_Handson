@@ -1,0 +1,5 @@
+- name: Ensure docker running
+  service:
+    name: docker
+    state: started
+    enabled: true

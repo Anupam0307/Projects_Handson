@@ -1,0 +1,138 @@
+pipeline {
+  agent any
+
+  environment {
+    AWS_REGION = "us-east-1"
+    DOCKERHUB_USER = "anupam0307"
+    IMAGE_NAME = "node-app"
+    IMAGE_TAG = "${BUILD_NUMBER}"
+  }
+
+  stages {
+
+    stage('Build AMI with Packer') {
+      steps {
+        withCredentials([
+          string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+          string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
+        ]) {
+          dir('packer') {
+            sh '''
+              export AWS_DEFAULT_REGION=${AWS_REGION}
+              packer build ec2-ami.pkr.hcl
+            '''
+          }
+        }
+      }
+    }
+
+    stage('Terraform Plan') {
+      steps {
+        withCredentials([
+          string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+          string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
+        ]) {
+          dir('terraform') {
+            sh '''
+              export AWS_DEFAULT_REGION=${AWS_REGION}
+              terraform init
+
+              AMI_ID=$(aws ec2 describe-images \
+                --owners self \
+                --query 'Images | sort_by(@,&CreationDate)[-1].ImageId' \
+                --output text)
+                # Dynamically fetches latest AMI built by Packer. Ensures infra always uses the fresh AMI
+              terraform plan -var="ami_id=$AMI_ID"
+            '''
+          }
+        }
+      }
+    }
+
+    stage('Manual Approval') {
+      steps {
+        input message: 'Approve Terraform Apply?', ok: 'Apply'
+      }
+    }
+
+    stage('Terraform Apply') {
+      steps {
+        withCredentials([
+          string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+          string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
+        ]) {
+          dir('terraform') {
+            sh '''
+              export AWS_DEFAULT_REGION=${AWS_REGION}
+
+              AMI_ID=$(aws ec2 describe-images \
+                --owners self \
+                --query 'Images | sort_by(@,&CreationDate)[-1].ImageId' \
+                --output text)
+
+              terraform apply -auto-approve -var="ami_id=$AMI_ID"
+            '''
+          }
+        }
+      }
+    }
+
+    stage('Configure EC2 with Ansible') {
+      steps {
+        withCredentials([
+          string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+          string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
+        ]) {
+          dir('ansible') {
+            sh '''
+              export AWS_DEFAULT_REGION=${AWS_REGION}
+              ansible-playbook playbook.yml
+            '''
+          }
+        }
+      }
+    }
+
+    stage('Build & Push Docker Image') {
+      steps {
+        dir('app') {
+          withCredentials([usernamePassword(
+            credentialsId: 'dockerhub-creds',
+            usernameVariable: 'DOCKER_USER',
+            passwordVariable: 'DOCKER_PASS'
+          )]) {
+            sh '''
+              echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+              docker build -t ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} .
+              docker push ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
+            '''
+          }
+        }
+      }
+    }
+
+    stage('Deploy to EKS') {
+      steps {
+        withCredentials([
+          string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+          string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
+        ]) {
+          dir('k8s') {
+            sh '''
+              export AWS_DEFAULT_REGION=${AWS_REGION}
+
+              aws eks update-kubeconfig \
+                --region ${AWS_REGION} \
+                --name my-eks-cluster
+
+              sed -i "s/IMAGE_TAG/${IMAGE_TAG}/g" deployment.yaml
+
+              kubectl apply -f deployment.yaml
+              kubectl apply -f service.yaml
+            '''
+          }
+        }
+      }
+    }
+  }
+}
