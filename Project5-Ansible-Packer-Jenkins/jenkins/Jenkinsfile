@@ -19,6 +19,8 @@ pipeline {
           dir('packer') {
             sh '''
               export AWS_DEFAULT_REGION=${AWS_REGION}
+              cd packer
+              ls -la
               packer build ec2-ami.pkr.hcl
             '''
           }
