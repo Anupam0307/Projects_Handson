@@ -11,22 +11,20 @@ pipeline {
   stages {
 
     stage('Build AMI with Packer') {
-      steps {
-        withCredentials([
-          string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
-          string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
-        ]) {
-          dir('packer') {
-            sh '''
-              export AWS_DEFAULT_REGION=${AWS_REGION}
-              cd packer
-              ls -la
-              packer build ec2-ami.pkr.hcl
-            '''
-          }
-        }
-      }
+  steps {
+    withCredentials([
+      string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+      string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
+    ]) {
+      sh '''
+        cd "$WORKSPACE/packer"
+        export AWS_DEFAULT_REGION=ap-south-1
+        packer build ec2-ami.pkr.hcl
+      '''
     }
+  }
+}
+
 
     stage('Terraform Plan') {
       steps {
