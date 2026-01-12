@@ -2,41 +2,33 @@ pipeline {
   agent any
 
   environment {
-    AWS_REGION    = "ap-south-1"
+    AWS_REGION     = "ap-south-1"
     DOCKERHUB_USER = "anupam0307"
     IMAGE_NAME     = "node-app"
     IMAGE_TAG      = "${BUILD_NUMBER}"
+    PROJECT_DIR = "Project5-Ansible-Packer-Jenkins"
   }
 
   stages {
 
     stage('Build AMI with Packer') {
-  steps {
-    withCredentials([
-      string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
-      string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
-    ]) {
-      dir('packer') {
-        sh '''
-          echo "Current directory:"
-          pwd
-
-          echo "Files in packer directory:"
-          ls -la
-
-          export AWS_DEFAULT_REGION=${AWS_REGION}
-
-          # Initialize plugins using the actual file
-          packer init ec2-ami.pkr.hcl
-
-          # Build AMI using the exact file name
-          packer build ec2-ami.pkr.hcl
-        '''
+      steps {
+        withCredentials([
+          string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+          string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
+        ]) {
+          dir("${PROJECT_DIR}/packer") {
+            sh '''
+              pwd
+              ls -la
+              export AWS_DEFAULT_REGION=${AWS_REGION}
+              packer init ec2-ami.pkr.hcl
+              packer build ec2-ami.pkr.hcl
+            '''
+          }
+        }
       }
     }
-  }
-}
-
 
     stage('Terraform Plan') {
       steps {
@@ -44,18 +36,15 @@ pipeline {
           string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
           string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
         ]) {
-          dir('terraform') {
+          dir("${PROJECT_DIR}/terraform") {
             sh '''
               export AWS_DEFAULT_REGION=${AWS_REGION}
-
               terraform init
 
               AMI_ID=$(aws ec2 describe-images \
                 --owners self \
                 --query 'Images | sort_by(@,&CreationDate)[-1].ImageId' \
                 --output text)
-
-              echo "Latest AMI ID: $AMI_ID"
 
               terraform plan \
                 -var="ami_id=$AMI_ID" \
@@ -78,7 +67,7 @@ pipeline {
           string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
           string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
         ]) {
-          dir('terraform') {
+          dir("${PROJECT_DIR}/terraform") {
             sh '''
               export AWS_DEFAULT_REGION=${AWS_REGION}
 
@@ -96,20 +85,13 @@ pipeline {
       }
     }
 
-    stage('Wait for EC2 readiness') {
-      steps {
-        echo "Waiting for EC2 instances to become reachable..."
-        sleep 60
-      }
-    }
-
     stage('Configure EC2 with Ansible') {
       steps {
         withCredentials([
           string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
           string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
         ]) {
-          dir('ansible') {
+          dir("${PROJECT_DIR}/ansible") {
             sh '''
               export AWS_DEFAULT_REGION=${AWS_REGION}
               ansible-playbook playbook.yml
@@ -126,10 +108,9 @@ pipeline {
           usernameVariable: 'DOCKER_USER',
           passwordVariable: 'DOCKER_PASS'
         )]) {
-          dir('app') {
+          dir("${PROJECT_DIR}/app") {
             sh '''
               echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-
               docker build -t ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} .
               docker push ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
             '''
@@ -144,7 +125,7 @@ pipeline {
           string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
           string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
         ]) {
-          dir('k8s') {
+          dir("${PROJECT_DIR}/k8s") {
             sh '''
               export AWS_DEFAULT_REGION=${AWS_REGION}
 
@@ -152,9 +133,7 @@ pipeline {
                 --region ${AWS_REGION} \
                 --name my-eks-cluster
 
-              cp deployment.yaml deployment_rendered.yaml
-              sed -i "s/IMAGE_TAG/${IMAGE_TAG}/g" deployment_rendered.yaml
-
+              sed "s/IMAGE_TAG/${IMAGE_TAG}/g" deployment.yaml > deployment_rendered.yaml
               kubectl apply -f deployment_rendered.yaml
               kubectl apply -f service.yaml
             '''
