@@ -1,5 +1,7 @@
-- hosts: web
+- name: Configure Web Servers on AWS
+  hosts: tag_Role_web
   become: true
+
   roles:
     - common
     - web

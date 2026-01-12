@@ -1,0 +1,23 @@
+user nginx;
+worker_processes auto;
+
+events {
+  worker_connections 1024;
+}
+
+http {
+  include       mime.types;
+  default_type  application/octet-stream;
+
+  sendfile        on;
+  keepalive_timeout 65;
+
+  server {
+    listen 80 default_server;
+    server_name _;
+
+    location / {
+      return 200 "Hello from Ansible-managed Nginx on AWS EC2\n";
+    }
+  }
+}
