@@ -8,6 +8,9 @@ pipeline {
     IMAGE_TAG       = "${BUILD_NUMBER}"
     PROJECT_DIR     = "Project5-Ansible-Packer-Jenkins"
     AMI_NAME_PREFIX = "devops-base-ami-"
+
+    AWS_ACCESS_KEY_ID     = credentials('aws-access-key')
+    AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
   }
 
   stages {
@@ -15,57 +18,47 @@ pipeline {
     stage('Build AMI with Packer') {
       when {
         expression {
-          return sh(
-            script: '''
+          sh(
+            script: """
               aws ec2 describe-images \
                 --owners self \
                 --filters "Name=name,Values=${AMI_NAME_PREFIX}*" \
                 --query 'Images | length(@)' \
                 --output text
-            ''',
+            """,
             returnStdout: true
           ).trim() == "0"
         }
       }
 
       steps {
-        withCredentials([
-          string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
-          string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
-        ]) {
-          dir("${PROJECT_DIR}/packer") {
-            sh '''
-              export AWS_DEFAULT_REGION=${AWS_REGION}
-              packer init ec2-ami.pkr.hcl
-              packer build ec2-ami.pkr.hcl
-            '''
-          }
+        dir("${PROJECT_DIR}/packer") {
+          sh '''
+            export AWS_DEFAULT_REGION=${AWS_REGION}
+            packer init ec2-ami.pkr.hcl
+            packer build ec2-ami.pkr.hcl
+          '''
         }
       }
     }
 
     stage('Terraform Plan') {
       steps {
-        withCredentials([
-          string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
-          string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
-        ]) {
-          dir("${PROJECT_DIR}/terraform") {
-            sh '''
-              export AWS_DEFAULT_REGION=${AWS_REGION}
-              terraform init
+        dir("${PROJECT_DIR}/terraform") {
+          sh '''
+            export AWS_DEFAULT_REGION=${AWS_REGION}
+            terraform init
 
-              AMI_ID=$(aws ec2 describe-images \
-                --owners self \
-                --filters "Name=name,Values=${AMI_NAME_PREFIX}*" \
-                --query 'Images | sort_by(@,&CreationDate)[-1].ImageId' \
-                --output text)
+            AMI_ID=$(aws ec2 describe-images \
+              --owners self \
+              --filters "Name=name,Values=${AMI_NAME_PREFIX}*" \
+              --query 'Images | sort_by(@,&CreationDate)[-1].ImageId' \
+              --output text)
 
-              terraform plan \
-                -var="ami_id=$AMI_ID" \
-                -var="aws_region=${AWS_REGION}"
-            '''
-          }
+            terraform plan \
+              -var="ami_id=$AMI_ID" \
+              -var="aws_region=${AWS_REGION}"
+          '''
         }
       }
     }
@@ -78,41 +71,31 @@ pipeline {
 
     stage('Terraform Apply') {
       steps {
-        withCredentials([
-          string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
-          string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
-        ]) {
-          dir("${PROJECT_DIR}/terraform") {
-            sh '''
-              export AWS_DEFAULT_REGION=${AWS_REGION}
+        dir("${PROJECT_DIR}/terraform") {
+          sh '''
+            export AWS_DEFAULT_REGION=${AWS_REGION}
 
-              AMI_ID=$(aws ec2 describe-images \
-                --owners self \
-                --filters "Name=name,Values=${AMI_NAME_PREFIX}*" \
-                --query 'Images | sort_by(@,&CreationDate)[-1].ImageId' \
-                --output text)
+            AMI_ID=$(aws ec2 describe-images \
+              --owners self \
+              --filters "Name=name,Values=${AMI_NAME_PREFIX}*" \
+              --query 'Images | sort_by(@,&CreationDate)[-1].ImageId' \
+              --output text)
 
-              terraform apply -auto-approve \
-                -var="ami_id=$AMI_ID" \
-                -var="aws_region=${AWS_REGION}"
-            '''
-          }
+            terraform apply -auto-approve \
+              -var="ami_id=$AMI_ID" \
+              -var="aws_region=${AWS_REGION}"
+          '''
         }
       }
     }
 
     stage('Configure EC2 with Ansible') {
       steps {
-        withCredentials([
-          string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
-          string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
-        ]) {
-          dir("${PROJECT_DIR}/ansible") {
-            sh '''
-              export AWS_DEFAULT_REGION=${AWS_REGION}
-              ansible-playbook playbook.yml
-            '''
-          }
+        dir("${PROJECT_DIR}/ansible") {
+          sh '''
+            export AWS_DEFAULT_REGION=${AWS_REGION}
+            ansible-playbook playbook.yml
+          '''
         }
       }
     }
@@ -137,23 +120,18 @@ pipeline {
 
     stage('Deploy to EKS') {
       steps {
-        withCredentials([
-          string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
-          string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
-        ]) {
-          dir("${PROJECT_DIR}/k8s") {
-            sh '''
-              export AWS_DEFAULT_REGION=${AWS_REGION}
+        dir("${PROJECT_DIR}/k8s") {
+          sh '''
+            export AWS_DEFAULT_REGION=${AWS_REGION}
 
-              aws eks update-kubeconfig \
-                --region ${AWS_REGION} \
-                --name my-eks-cluster
+            aws eks update-kubeconfig \
+              --region ${AWS_REGION} \
+              --name my-eks-cluster
 
-              sed "s/IMAGE_TAG/${IMAGE_TAG}/g" deployment.yaml > deployment_rendered.yaml
-              kubectl apply -f deployment_rendered.yaml
-              kubectl apply -f service.yaml
-            '''
-          }
+            sed "s/IMAGE_TAG/${IMAGE_TAG}/g" deployment.yaml > deployment_rendered.yaml
+            kubectl apply -f deployment_rendered.yaml
+            kubectl apply -f service.yaml
+          '''
         }
       }
     }
