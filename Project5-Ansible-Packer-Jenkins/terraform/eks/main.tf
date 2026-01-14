@@ -11,15 +11,7 @@ module "eks" {
   cluster_endpoint_public_access  = true
   cluster_endpoint_private_access = true
 
-  manage_aws_auth_configmap = true
-
-  aws_auth_users = [
-    {
-      userarn  = "arn:aws:iam::802732540071:user/devops-07"
-      username = "jenkins"
-      groups   = ["system:masters"]
-    }
-  ]
+  enable_cluster_creator_admin_permissions = true
 
   eks_managed_node_groups = {
     default = {
@@ -30,7 +22,6 @@ module "eks" {
     }
   }
 }
-
 
 
 module "vpc" {
