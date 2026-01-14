@@ -63,11 +63,11 @@ pipeline {
       }
     }
 
-    stage('Manual Approval') {
-      steps {
-        input message: 'Approve Terraform Apply?', ok: 'Apply'
-      }
-    }
+    // stage('Manual Approval') {
+    //   steps {
+    //     input message: 'Approve Terraform Apply?', ok: 'Apply'
+    //   }
+    // }
 
     stage('Terraform Apply') {
       steps {
