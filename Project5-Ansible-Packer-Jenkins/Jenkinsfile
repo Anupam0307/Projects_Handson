@@ -8,6 +8,7 @@ pipeline {
     IMAGE_TAG       = "${BUILD_NUMBER}"
     PROJECT_DIR     = "Project5-Ansible-Packer-Jenkins"
     AMI_NAME_PREFIX = "devops-base-ami-"
+    EKS_CLUSTER     = "my-eks-cluster"
 
     AWS_ACCESS_KEY_ID     = credentials('aws-access-key')
     AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
@@ -15,6 +16,9 @@ pipeline {
 
   stages {
 
+    /* =====================================================
+       PACKER – Build AMI (only if not exists)
+       ===================================================== */
     stage('Build AMI with Packer') {
       when {
         expression {
@@ -42,9 +46,12 @@ pipeline {
       }
     }
 
-    stage('Terraform Plan') {
+    /* =====================================================
+       TERRAFORM PLAN – EC2
+       ===================================================== */
+    stage('Terraform Plan (EC2)') {
       steps {
-        dir("${PROJECT_DIR}/terraform") {
+        dir("${PROJECT_DIR}/terraform/ec2") {
           sh '''
             export AWS_DEFAULT_REGION=${AWS_REGION}
             terraform init
@@ -63,15 +70,12 @@ pipeline {
       }
     }
 
-    // stage('Manual Approval') {
-    //   steps {
-    //     input message: 'Approve Terraform Apply?', ok: 'Apply'
-    //   }
-    // }
-
-    stage('Terraform Apply') {
+    /* =====================================================
+       TERRAFORM APPLY – EC2
+       ===================================================== */
+    stage('Terraform Apply (EC2)') {
       steps {
-        dir("${PROJECT_DIR}/terraform") {
+        dir("${PROJECT_DIR}/terraform/ec2") {
           sh '''
             export AWS_DEFAULT_REGION=${AWS_REGION}
 
@@ -89,6 +93,9 @@ pipeline {
       }
     }
 
+    /* =====================================================
+       ANSIBLE – Configure EC2
+       ===================================================== */
     stage('Configure EC2 with Ansible') {
       steps {
         dir("${PROJECT_DIR}/ansible") {
@@ -100,6 +107,9 @@ pipeline {
       }
     }
 
+    /* =====================================================
+       DOCKER – Build & Push Image
+       ===================================================== */
     stage('Build & Push Docker Image') {
       steps {
         withCredentials([usernamePassword(
@@ -118,15 +128,45 @@ pipeline {
       }
     }
 
+    /* =====================================================
+       TERRAFORM – Create EKS Cluster
+       ===================================================== */
+    stage('Create EKS Cluster') {
+      steps {
+        dir("${PROJECT_DIR}/terraform/eks") {
+          sh '''
+            export AWS_DEFAULT_REGION=${AWS_REGION}
+            terraform init
+            terraform apply -auto-approve \
+              -var="aws_region=${AWS_REGION}"
+          '''
+        }
+      }
+    }
+
+    /* =====================================================
+       WAIT – EKS Ready
+       ===================================================== */
+    stage('Wait for EKS Cluster') {
+      steps {
+        sh '''
+          aws eks wait cluster-active \
+            --region ${AWS_REGION} \
+            --name ${EKS_CLUSTER}
+        '''
+      }
+    }
+
+    /* =====================================================
+       DEPLOY – Kubernetes
+       ===================================================== */
     stage('Deploy to EKS') {
       steps {
         dir("${PROJECT_DIR}/k8s") {
           sh '''
-            export AWS_DEFAULT_REGION=${AWS_REGION}
-
             aws eks update-kubeconfig \
               --region ${AWS_REGION} \
-              --name my-eks-cluster
+              --name ${EKS_CLUSTER}
 
             sed "s/IMAGE_TAG/${IMAGE_TAG}/g" deployment.yaml > deployment_rendered.yaml
             kubectl apply -f deployment_rendered.yaml
